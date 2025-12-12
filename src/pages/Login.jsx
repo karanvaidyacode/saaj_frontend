@@ -77,7 +77,7 @@ const Login = () => {
       <div className="max-w-md w-full bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-8 mx-4">
         <div className="text-center mb-8">
           <img
-            src="/src/assets/logo.jpg"
+            src="/public/logo.jpg"
             alt="SaajJewels"
             className="w-28 h-28 rounded-full object-cover mx-auto mb-4 ring-4 ring-pink-100 border-collapse shadow-lg"
           />
