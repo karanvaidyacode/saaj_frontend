@@ -190,11 +190,14 @@ const CheckoutPage = () => {
 
     try {
       // Use the proper backend endpoint for production
-      const response = await fetch("/api/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/razorpay/create-order`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderData),
+        }
+      );
 
       // Check if response is ok before parsing JSON
       if (!response.ok) {
@@ -238,14 +241,17 @@ const CheckoutPage = () => {
 
     try {
       // Use the proper backend endpoint for production
-      const response = await fetch("/api/razorpay/verify-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...paymentDetails,
-          orderData: orderData,
-        }),
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/razorpay/verify-payment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...paymentDetails,
+            orderData: orderData,
+          }),
+        }
+      );
 
       // Check if response is ok before parsing JSON
       if (!response.ok) {
@@ -338,14 +344,17 @@ const CheckoutPage = () => {
 
                 console.log("Sending order to backend:", orderData);
 
-                const saveOrderResponse = await fetch("/api/admin/orders", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "x-admin-token": "saaj123", // Hardcoded admin token for now
-                  },
-                  body: JSON.stringify(orderData),
-                });
+                const saveOrderResponse = await fetch(
+                  `${import.meta.env.VITE_API_URL}/api/admin/orders`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-admin-token": "saaj123", // Hardcoded admin token for now
+                    },
+                    body: JSON.stringify(orderData),
+                  }
+                );
 
                 console.log(
                   "Order creation response status:",
@@ -640,14 +649,17 @@ const CheckoutPage = () => {
 
         console.log("Sending COD order to backend:", orderData);
 
-        const response = await fetch("/api/admin/orders", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-admin-token": "saaj123", // Hardcoded admin token for now
-          },
-          body: JSON.stringify(orderData),
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/admin/orders`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-admin-token": "saaj123", // Hardcoded admin token for now
+            },
+            body: JSON.stringify(orderData),
+          }
+        );
 
         console.log("COD order creation response status:", response.status);
 
