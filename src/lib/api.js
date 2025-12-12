@@ -1,5 +1,5 @@
 // When using Vite's proxy, we don't need the full URL
-const API_URL = "";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function fetchApi(endpoint, options = {}) {
   const defaultOptions = {
@@ -10,7 +10,7 @@ export async function fetchApi(endpoint, options = {}) {
 
   // Get admin token from localStorage if available
   const adminToken = localStorage.getItem("adminToken");
-  
+
   // Add admin token to headers if it exists
   if (adminToken) {
     defaultOptions.headers["x-admin-token"] = adminToken;
@@ -53,9 +53,11 @@ export async function fetchApi(endpoint, options = {}) {
   } catch (err) {
     console.error("API Error:", err);
     // Enhance error information
-    if (err instanceof TypeError && err.message === 'Failed to fetch') {
-      const networkError = new Error('Network error - please check if the backend server is running');
-      networkError.type = 'NETWORK_ERROR';
+    if (err instanceof TypeError && err.message === "Failed to fetch") {
+      const networkError = new Error(
+        "Network error - please check if the backend server is running"
+      );
+      networkError.type = "NETWORK_ERROR";
       throw networkError;
     }
     if (err instanceof Error) throw err;
