@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Mail } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const ContactUs = () => {
@@ -145,6 +145,7 @@ const ContactUs = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/*E-mail*/}
                 <div className="flex items-start gap-4">
                   <div className="mt-1 p-2 rounded-full bg-accent text-accent-foreground">
                     <Mail className="w-5 h-5" />
@@ -152,6 +153,16 @@ const ContactUs = () => {
                   <div>
                     <h3 className="font-semibold">Email</h3>
                     <p className="text-sm text-muted-foreground">saajewels45@gmail.com</p>
+                  </div>
+                </div>
+                {/*Mobile*/}
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 p-2 rounded-full bg-accent text-accent-foreground">
+                    <Phone className="w-5 h-5" />
+                  </div>
+                  <div>
+                   <h3 className="font-semibold">Mobile</h3>
+                   <p className="text-sm text-muted-foreground">+91 99218 10182</p>
                   </div>
                 </div>
               </CardContent>
