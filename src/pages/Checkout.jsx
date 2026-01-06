@@ -278,7 +278,7 @@ const CheckoutPage = () => {
       const order = await createOrder(totalWithShipping);
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_S0V9OfWCncAp7b", // Use environment variable or fallback to test key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID , // Use environment variable or fallback to test key
         amount: order.amount, // This receives amount in paise from backend
         currency: order.currency,
         name: "Saaj Jewels",
