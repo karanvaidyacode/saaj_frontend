@@ -39,14 +39,11 @@ const CartPage = () => {
   const shippingCostINR = 69;
 
   // Shifting these variables above for clarity
-  const COD_MIN = 449;
-  const FREE_SHIP_MIN = 799;
-  const COD_CHARGE = 49;
+  // COD constants removed
 
   // Compute payment method to default to 'razorpay' for prepaid, but you might use context or props
   // Calculate if cod eligible
-  const isCodEligible = parseFloat(totalPrice) >= COD_MIN;
-  const isPrepaidEligibleForFreeShipping = parseFloat(totalPrice) >= FREE_SHIP_MIN;
+  // COD and Free Shipping eligibility removed
   const paymentMethod = 'razorpay'; // Cart page can't choose method, handled at checkout
 
   // Calculate discounts
@@ -64,8 +61,8 @@ const CartPage = () => {
   const offerDiscount = (hasClaimedOffer && remainingOffers > 0) ? discountedSubtotal * 0.10 : 0;
   const subtotalAfterOffer = discountedSubtotal - offerDiscount;
   
-  const shippingCost = parseFloat(subtotalAfterOffer) >= FREE_SHIP_MIN ? 0 : 69;
-  const grandTotal = (parseFloat(subtotalAfterOffer) + shippingCost).toFixed(2);
+  const shippingCost = 69;
+  const grandTotal = (Number(subtotalAfterOffer) + Number(shippingCost)).toFixed(2);
 
   // Page tracking
   useEffect(() => {
@@ -162,7 +159,13 @@ const CartPage = () => {
                     {/* Product Image */}
                     <div className="w-20 h-20 md:w-24 md:h-24 aspect-square overflow-hidden relative rounded-xl flex-shrink-0 ring-2 ring-rose-100 group cursor-pointer">
                       <img
-                        src={item.image}
+                        src={(() => {
+                          if (Array.isArray(item.media) && item.media.length > 0) {
+                            const firstM = item.media[0];
+                            return typeof firstM === 'string' ? firstM : (firstM.url || firstM);
+                          }
+                          return item.image || item.imageUrl || item.img || "https://placehold.co/100x100?text=No+Image";
+                        })()}
                         alt={item.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
@@ -191,9 +194,36 @@ const CartPage = () => {
                         </Button>
                       </div>
 
-                      <p className="text-xs md:text-sm text-muted-foreground mb-4 line-clamp-2">
+                      <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">
                         {item.description}
                       </p>
+
+                      {/* Customization Details */}
+                      {(item.customRequest || item.shirtSize || (item.customPhotos && item.customPhotos.length > 0)) && (
+                        <div className="mb-4 p-3 bg-secondary/20 rounded-lg border border-secondary/30 text-xs md:text-sm space-y-2">
+                          <p className="font-semibold text-accent flex items-center gap-1 italic">
+                             ✨ Your Customization
+                          </p>
+                          {item.customRequest && (
+                            <p><span className="font-medium">Request:</span> {item.customRequest}</p>
+                          )}
+                          {item.shirtSize && (
+                            <p><span className="font-medium">Size:</span> {item.shirtSize}</p>
+                          )}
+                          {item.customPhotos && item.customPhotos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {item.customPhotos.map((photo, i) => (
+                                <img 
+                                  key={i} 
+                                  src={photo} 
+                                  alt="Custom" 
+                                  className="w-10 h-10 object-cover rounded border border-rose-200" 
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Quantity and Pricing */}
                       <div className="flex items-center justify-between">
@@ -244,7 +274,7 @@ const CartPage = () => {
                   <div className="flex justify-between text-base bg-white/60 rounded-lg p-3 border border-rose-100">
                     <span className="text-muted-foreground font-medium">Subtotal</span>
                     <span className="font-bold text-rose-600">
-                      ₹{discountedSubtotal.toFixed(2)}
+                      ₹{Number(discountedSubtotal).toFixed(2)}
                     </span>
                   </div>
                   
@@ -255,7 +285,7 @@ const CartPage = () => {
                         10% Limited Offer Discount
                       </span>
                       <span className="font-bold text-green-600">
-                        -₹{offerDiscount.toFixed(2)}
+                        -₹{Number(offerDiscount).toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -263,7 +293,7 @@ const CartPage = () => {
                   <div className="flex justify-between text-base bg-white/60 rounded-lg p-3 border border-rose-100">
                     <span className="text-muted-foreground font-medium">Shipping</span>
                     <span className="font-semibold text-amber-600">
-                      {shippingCost === 0 ? <span className="text-green-600">Free 🎁</span> : `₹${shippingCost}`}
+                      {`₹${shippingCost}`}
                     </span>
                   </div>
 
@@ -298,11 +328,7 @@ const CartPage = () => {
                     🔒 Secure checkout • Shipping ₹69
                   </p>
                 </div>
-                {!isCodEligible && (
-                  <div className="mt-2 text-xs text-center text-destructive">
-                    COD available on orders above ₹449/-
-                  </div>
-                )}
+                {/* COD unavailable message removed */}
               </div>
             </Card>
           </div>

@@ -8,7 +8,9 @@ import {
   Users, 
   LogOut,
   Menu,
-  X
+  X,
+  Plus,
+  List
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -16,14 +18,16 @@ import Stats from "./dashboard-components/Stats";
 import MiniSummary from "./dashboard-components/MiniSummary";
 import TopSellingProducts from "./dashboard-components/TopSellingProducts";
 import OrdersChart from "./dashboard-components/OrdersChart";
-import ProductManagement from "./dashboard-components/ProductManagement";
+import AddProductForm from "./dashboard-components/AddProductForm";
+import AllProductsList from "./dashboard-components/AllProductsList";
+import RecentCustomizations from "./dashboard-components/RecentCustomizations";
 
 const NewAdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("dashboard"); // dashboard or products
+  const [activeView, setActiveView] = useState("dashboard"); // dashboard, add-product, all-products
 
   // Check if admin is authenticated
   const adminToken = localStorage.getItem("adminToken");
@@ -42,7 +46,8 @@ const NewAdminDashboard = () => {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", action: () => setActiveView("dashboard") },
-    { icon: Package, label: "Products", action: () => setActiveView("products") },
+    { icon: Plus, label: "Add Product", action: () => setActiveView("add-product") },
+    { icon: List, label: "All Products", action: () => setActiveView("all-products") },
     { icon: ListOrdered, label: "Orders", path: "/admin/orders" },
     { icon: Users, label: "Customers", path: "/admin/customers" },
   ];
@@ -143,7 +148,11 @@ const NewAdminDashboard = () => {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-semibold">Dashboard</h1>
+            <h1 className="text-xl font-semibold">
+              {activeView === "dashboard" ? "Dashboard" : 
+               activeView === "add-product" ? "Add New Product" :
+               activeView === "all-products" ? "All Products" : "Dashboard"}
+            </h1>
           </div>
         </header>
 
@@ -155,16 +164,23 @@ const NewAdminDashboard = () => {
                 <MiniSummary />
               </div>
               
-              <div className="grid grid-cols-1 gap-6">
-                <Card className="p-6">
-                  <h2 className="text-lg font-semibold mb-4">Orders Overview</h2>
-                  <OrdersChart />
-                </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Card className="p-6">
+                    <h2 className="text-lg font-semibold mb-4">Orders Overview</h2>
+                    <OrdersChart />
+                  </Card>
+                </div>
+                <div>
+                  <RecentCustomizations />
+                </div>
               </div>
             </>
-          ) : (
-            <ProductManagement />
-          )}
+          ) : activeView === "add-product" ? (
+            <AddProductForm onProductAdded={() => setActiveView("all-products")} />
+          ) : activeView === "all-products" ? (
+            <AllProductsList />
+          ) : null}
         </main>
       </div>
     </div>

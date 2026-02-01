@@ -3,13 +3,31 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Edit, Trash2, Eye, Palette } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, Palette, Download, Image as ImageIcon } from 'lucide-react';
 
 export default function CustomOrders() {
   const [customOrders, setCustomOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredOrders, setFilteredOrders] = useState([]);
+
+  const handleDownload = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'custom-reference.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+      window.open(url, '_blank');
+    }
+  };
 
   // Fetch all custom orders
   useEffect(() => {
@@ -157,7 +175,35 @@ export default function CustomOrders() {
                       <div className="text-sm text-gray-500">{order.customerEmail || 'N/A'}</div>
                     </td>
                     <td className="p-4">
-                      <div className="max-w-xs truncate">{order.designDescription || 'N/A'}</div>
+                      <div className="flex flex-col gap-1">
+                        <div className="max-w-xs truncate font-medium">{order.designDescription || 'N/A'}</div>
+                        {order.referenceImages && order.referenceImages.length > 0 && (
+                          <div className="flex gap-1 mt-1">
+                            {order.referenceImages.slice(0, 3).map((img, i) => (
+                              <div key={i} className="relative group shrink-0">
+                                <img src={img} className="w-8 h-8 object-cover rounded border" alt="Reference" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded gap-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleDownload(img, `custom-order-${order.id}-ref-${i}.jpg`);
+                                    }}
+                                    className="p-0.5 hover:bg-white/20 rounded transition-colors"
+                                    title="Download"
+                                  >
+                                    <Download className="h-2 w-2 text-white" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {order.referenceImages.length > 3 && (
+                              <div className="w-8 h-8 rounded border bg-gray-100 flex items-center justify-center text-[10px] text-gray-500">
+                                +{order.referenceImages.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1">

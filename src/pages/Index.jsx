@@ -2,7 +2,11 @@ import HeroSection from "@/components/HeroSection";
 import CategoriesSection from "@/components/CategoriesSection";
 import NecklaceSection from "@/components/NecklaceSection";
 import BraceletSection from "@/components/BraceletSection";
+import BouquetSection from "@/components/BouquetSection";
 import EarringsSection from "@/components/EarringsSection";
+import ChocolateTowerSection from "@/components/ChocolateTowerSection";
+import JhumkaBoxSection from "@/components/JhumkaBoxSection";
+import MensHamperSection from "@/components/MensHamperSection";
 import CustomPackagingSection from "@/components/CustomPackagingSection";
 import JustDropSection from "@/components/JustDropSection";
 import FreeGiftSection from "@/components/FreeGiftSection";
@@ -55,10 +59,15 @@ const Index = () => {
       <HeroSection />
       <JustDropSection />
       <OfferSection />
+      <BouquetSection />
+      <MensHamperSection />      
+      <FreeGiftSection />
+      <JhumkaBoxSection />
       <NecklaceSection />
       <RunningQuotesBar />
+      <ChocolateTowerSection />
+      <EarringsSection />
       <BraceletSection />
-      <FreeGiftSection />
       <CustomPackagingSection />
     </div>
   );

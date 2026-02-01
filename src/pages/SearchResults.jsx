@@ -33,14 +33,29 @@ const SearchResults = () => {
       setLoading(true);
       try {
         // If there's a search query, use the search endpoint
-        if (searchQuery.trim() !== "") {
-          const data = await fetchApi(`/api/products/search?q=${encodeURIComponent(searchQuery)}`);
-          setProducts(Array.isArray(data) ? data : []);
-        } else {
-          // Otherwise fetch all products
-          const data = await fetchApi("/api/products");
-          setProducts(Array.isArray(data) ? data : []);
-        }
+          const processData = (list) => {
+            return Array.isArray(list) ? list.map(product => {
+              let imageUrl = product.image || product.imageUrl || product.img;
+              
+              if (!imageUrl && Array.isArray(product.media) && product.media.length > 0) {
+                const firstMedia = product.media[0];
+                imageUrl = typeof firstMedia === 'string' ? firstMedia : firstMedia.url;
+              }
+
+              if (imageUrl && (imageUrl.startsWith('blob:') || imageUrl === 'undefined' || imageUrl === '/images/placeholder.jpg')) {
+                imageUrl = '/images/placeholder.svg';
+              }
+              return { ...product, image: imageUrl };
+            }) : [];
+          };
+
+          if (searchQuery.trim() !== "") {
+            const data = await fetchApi(`/api/products/search?q=${encodeURIComponent(searchQuery)}`);
+            setProducts(processData(data));
+          } else {
+            const data = await fetchApi("/api/products");
+            setProducts(processData(data));
+          }
       } catch (error) {
         console.error("Error fetching products:", error);
         setProducts([]);
@@ -60,12 +75,12 @@ const SearchResults = () => {
   const handleAddToCart = (product, e) => {
     e.stopPropagation();
     addToCart(product);
-    setAddedItems((prev) => new Set([...prev, product._id]));
+    setAddedItems((prev) => new Set([...prev, product.id || product._id]));
 
     setTimeout(() => {
       setAddedItems((prev) => {
         const newSet = new Set(prev);
-        newSet.delete(product._id);
+        newSet.delete(product.id || product._id);
         return newSet;
       });
     }, 2000);
@@ -110,10 +125,10 @@ const SearchResults = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
             {products.map((product, index) => (
               <Card
-                key={product._id}
+                key={product.id || product._id}
                 className="group overflow-hidden rounded-xl sm:rounded-2xl hover:shadow-2xl transition-all cursor-pointer animate-fade-in"
                 style={{ animationDelay: `${index * 0.05}s` }}
-                onClick={() => navigate(`/products/${product._id}`)}
+                onClick={() => navigate(`/products/${product.id || product._id}`)}
               >
                 <div className="aspect-square overflow-hidden relative bg-gradient-to-br from-rose-50 to-amber-50">
                   <img
@@ -161,14 +176,14 @@ const SearchResults = () => {
                         description: `${product.name} has been added to your cart.`,
                       });
                     }}
-                    disabled={addedItems.has(product._id)}
+                    disabled={addedItems.has(product.id || product._id)}
                     className={`w-full h-8 text-xs sm:h-9 sm:text-sm transition-all duration-300 ${
-                      addedItems.has(product._id)
+                      addedItems.has(product.id || product._id)
                         ? "bg-green-600 hover:bg-green-700"
                         : ""
                     }`}
                   >
-                    {addedItems.has(product._id) ? (
+                    {addedItems.has(product.id || product._id) ? (
                       <>
                         <Check className="w-4 h-4 mr-1" />
                         Added

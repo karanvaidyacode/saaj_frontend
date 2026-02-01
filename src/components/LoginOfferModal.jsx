@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOffer } from "@/contexts/OfferContext";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Gift } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 export default function LoginOfferModal() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { setOfferClaimed, hasClaimedOffer, remainingOffers, updateRemainingOffers, markOfferAsClaimed } = useOffer();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -15,26 +15,26 @@ export default function LoginOfferModal() {
   const [coupon, setCoupon] = useState("SAAJ10");
   const [isLoading, setIsLoading] = useState(false);
 
-  // show after 5s if not authenticated and hasn't claimed offer
+  // show after 5s if not authenticated and hasn't claimed offer and offers remain
   useEffect(() => {
-    if (!isAuthenticated && !hasClaimedOffer) {
+    if (!isAuthenticated && !hasClaimedOffer && remainingOffers > 0) {
       const t = setTimeout(() => setOpen(true), 5000);
       return () => clearTimeout(t);
-    } else if (hasClaimedOffer) {
+    } else if (hasClaimedOffer || remainingOffers <= 0) {
       setOpen(false);
     }
-  }, [isAuthenticated, hasClaimedOffer]);
+  }, [isAuthenticated, hasClaimedOffer, remainingOffers]);
 
   // Auto-claim offer when user becomes authenticated
   useEffect(() => {
     const autoClaim = async () => {
-      if (isAuthenticated && !hasClaimedOffer) {
-        await setOfferClaimed("SAAJ10");
+      if (isAuthenticated && user?.email && !hasClaimedOffer && remainingOffers > 0) {
+        await setOfferClaimed("SAAJ10", user.email);
         setOpen(false);
       }
     };
     autoClaim();
-  }, [isAuthenticated, hasClaimedOffer, setOfferClaimed]);
+  }, [isAuthenticated, user, hasClaimedOffer, remainingOffers, setOfferClaimed]);
 
   // Check if email has already claimed offer
   const checkEmailClaimed = async (emailToCheck) => {
@@ -139,12 +139,12 @@ export default function LoginOfferModal() {
             <div className="mb-3">
               <Gift className="h-16 w-16 text-[#c6a856] mx-auto drop-shadow-[0_6px_20px_rgba(198,168,86,0.25)]" />
             </div>
-            <h3 className="text-2xl font-playfair font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a856] via-[#f4e4bc] to-[#c6a856]">
+            <DialogTitle className="text-2xl font-playfair font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#c6a856] via-[#f4e4bc] to-[#c6a856]">
               Claim 10% OFF
-            </h3>
-            <p className="text-sm text-[#cbd5e1]">
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#cbd5e1]">
               Enter your Gmail to receive the coupon code for your order
-            </p>
+            </DialogDescription>
             
             {/* Offer Info - Remaining Customers */}
             {remainingOffers > 0 && (

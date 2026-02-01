@@ -5,6 +5,8 @@ import { useOffer } from "@/contexts/OfferContext";
 const OfferSection = () => {
   const { remainingOffers } = useOffer();
 
+  if (remainingOffers <= 0) return null;
+
   return (
     <div className="w-full py-10 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-y border-amber-200">
       <div className="max-w-6xl mx-auto px-4">
@@ -21,10 +23,10 @@ const OfferSection = () => {
           
           <div className="flex-1 text-center md:text-left">
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-amber-900 mb-2">
-              First 30 Customers Get 10% Discount
+              First 5 Customers Get 10% Discount
             </h2>
             <p className="text-lg text-amber-700">
-              Exclusive offer for our early customers - Limited to first 30 customers only
+              Exclusive offer for our early customers - Limited to first 5 customers only
             </p>
           </div>
           

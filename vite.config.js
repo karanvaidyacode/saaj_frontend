@@ -6,15 +6,15 @@ import path from "path";
 export default defineConfig({
   server: {
     host: "0.0.0.0",
-    port: 5175, // Changed from 5000 to 5175
+    port: 3000, // Changed from 5000 to 5175
     allowedHosts: true,
     proxy: {
       "/api": {
-        target: "https://saaj-backend.onrender.com/", // Changed from 3006 to 3007
+        target: "https://saaj-backend.onrender.com/",
         changeOrigin: true,
       },
       "/auth": {
-        target: "https://saaj-backend.onrender.com/", // Changed from 3006 to 3007
+        target: "https://saaj-backend.onrender.com/",
         changeOrigin: true,
       },
     },

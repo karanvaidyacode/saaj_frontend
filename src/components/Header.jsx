@@ -43,6 +43,10 @@ const Header = ({ onToggleSidebar, isSidebarOpen }) => {
     { name: "Jhumka", icon: CircleDot },
     { name: "Hamper", icon: Package },
     { name: "Custom Packaging", icon: Package },
+    { name: "Bouquet", icon: Sparkles },
+    { name: "Chocolate Tower", icon: Package },
+    { name: "Jhumka Box", icon: Star },
+    { name: "Men's Hamper", icon: Package },
   ];
 
   const handleCategoryClick = (categoryName) => {

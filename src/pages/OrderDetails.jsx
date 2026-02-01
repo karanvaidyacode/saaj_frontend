@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate, useParams } from "react-router-dom";
 import { fetchApi } from '@/lib/api';
-import { ArrowLeft, Package, User, MapPin, CreditCard } from 'lucide-react';
+import { ArrowLeft, Package, User, MapPin, CreditCard, Download, Image as ImageIcon } from 'lucide-react';
 
 export default function OrderDetails() {
   const navigate = useNavigate();
@@ -11,6 +11,24 @@ export default function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handleDownload = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'customization-photo.jpg';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+      window.open(url, '_blank');
+    }
+  };
 
   // Check if admin is authenticated
   const adminToken = localStorage.getItem("adminToken");
@@ -219,27 +237,77 @@ export default function OrderDetails() {
                   <div className="space-y-4">
                     {order.items && order.items.map((item, index) => (
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
-                        <div className="w-16 h-16 rounded-md overflow-hidden">
-                          {item.image ? (
+                        <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 border">
+                          {item.media && item.media[0] ? (
+                            <img
+                              src={item.media[0].url}
+                              alt={item.name || "Product"}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : item.image ? (
                             <img
                               src={item.image}
                               alt={item.name || "Product"}
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<div class="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center"><span class="text-xs text-gray-500">No Image</span></div>';
+                                e.target.parentElement.innerHTML = '<div class="bg-gray-200 border-2 border-dashed rounded-md w-full h-full flex items-center justify-center"><span class="text-[8px] text-gray-500 text-center">No Image</span></div>';
                               }}
                             />
                           ) : (
-                            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
-                              <span className="text-xs text-gray-500">No Image</span>
+                            <div className="bg-gray-200 border-2 border-dashed rounded-md w-full h-full flex items-center justify-center">
+                              <span className="text-[8px] text-gray-500">No Image</span>
                             </div>
                           )}
                         </div>
                         <div className="flex-1">
                           <h3 className="font-medium">{item.name}</h3>
-                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                          <p className="text-sm text-gray-600">Price: ₹{(Number(item.price) || 0).toFixed(2)}</p>
+                          <div className="flex gap-4 text-sm text-gray-600">
+                            <span>Qty: {item.quantity}</span>
+                            <span>Price: ₹{(Number(item.price) || 0).toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Customization Details */}
+                          {(item.shirtSize || item.customRequest || (item.customPhotos && item.customPhotos.length > 0)) && (
+                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-100 rounded text-xs space-y-1">
+                              <p className="font-semibold text-yellow-800">Customization:</p>
+                              {item.shirtSize && <p><strong>Shirt Size:</strong> {item.shirtSize}</p>}
+                              {item.customRequest && <p><strong>Request:</strong> {item.customRequest}</p>}
+                              {item.customPhotos && item.customPhotos.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {item.customPhotos.map((url, i) => (
+                                    <div key={i} className="relative group shrink-0">
+                                      <img 
+                                        src={url} 
+                                        className="w-12 h-12 object-cover rounded border border-gray-200"
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded gap-1">
+                                        <a 
+                                          href={url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="p-1 hover:bg-white/20 rounded transition-colors"
+                                          title="View Full Size"
+                                        >
+                                          <ImageIcon className="h-3 w-3 text-white" />
+                                        </a>
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            handleDownload(url, `order-${order.orderNumber}-item-${index}-custom-${i}.jpg`);
+                                          }}
+                                          className="p-1 hover:bg-white/20 rounded transition-colors"
+                                          title="Download Image"
+                                        >
+                                          <Download className="h-3 w-3 text-white" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div className="font-medium">₹{((Number(item.price) || 0) * (item.quantity || 0)).toFixed(2)}</div>
                       </div>

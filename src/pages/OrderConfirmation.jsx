@@ -240,7 +240,7 @@ const OrderConfirmation = () => {
                       <div>
                         <p className="text-muted-foreground">Total Amount</p>
                         <p className="font-medium">
-                          ₹{(orderInfo.totalAmount || 0).toFixed(2)}
+                          ₹{Number(orderInfo.totalAmount || 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -278,7 +278,7 @@ const OrderConfirmation = () => {
                                     <p className="text-xs font-medium">
                                       ₹
                                       {(
-                                        (item?.discountedPrice || item?.price || 0) *
+                                        Number(item?.discountedPrice || item?.price || 0) *
                                         (item?.quantity || 1)
                                       ).toFixed(2)}
                                     </p>

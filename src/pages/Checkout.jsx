@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
@@ -31,9 +32,8 @@ const loadRazorpayScript = () =>
     document.body.appendChild(script);
   });
 
-const COD_MIN = 449;
-const FREE_SHIP_MIN = 799;
-const COD_CHARGE = 49;
+// Shipping constants
+const SHIPPING_COST = 69;
 
 const CheckoutPage = () => {
   const { items, totalItems, clearCart } = useCart();
@@ -83,11 +83,9 @@ const CheckoutPage = () => {
     hasClaimedOffer && remainingOffers > 0 ? discountedSubtotal * 0.1 : 0;
   const subtotalAfterOffer = discountedSubtotal - offerDiscount;
 
-  const isCodEligible = parseFloat(subtotalAfterOffer) >= COD_MIN;
-  const isPrepaidEligibleForFreeShipping =
-    parseFloat(subtotalAfterOffer) >= FREE_SHIP_MIN;
-  const shippingCost = parseFloat(subtotalAfterOffer) >= FREE_SHIP_MIN ? 0 : 69;
-  const codFee = formData.paymentMethod === "cod" ? COD_CHARGE : 0;
+  const shippingCost = SHIPPING_COST;
+  // codFee removed
+  const codFee = 0;
 
   // Handle form input changes
   const handleInputChange = (field, value) => {
@@ -236,6 +234,9 @@ const CheckoutPage = () => {
           computeDiscountedPrice(item.price, getDiscountRate(item)) ||
           item.price ||
           0,
+        customRequest: item.customRequest,
+        shirtSize: item.shirtSize,
+        customPhotos: item.customPhotos,
       })),
     };
 
@@ -276,9 +277,9 @@ const CheckoutPage = () => {
       const totalWithShipping = subtotalAfterOffer + shippingCost;
       // Pass the amount in rupees (not paise) to createOrder function
       const order = await createOrder(totalWithShipping);
-
+      console.log("Using Razorpay Key:", import.meta.env.VITE_RAZORPAY_KEY_ID);
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID , // Use environment variable or fallback to test key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Use environment variable or fallback to test key
         amount: order.amount, // This receives amount in paise from backend
         currency: order.currency,
         name: "Saaj Jewels",
@@ -331,6 +332,9 @@ const CheckoutPage = () => {
                       ) ||
                       item.price ||
                       0,
+                    customRequest: item.customRequest,
+                    shirtSize: item.shirtSize,
+                    customPhotos: item.customPhotos,
                     // Removed image to reduce payload size
                   })),
                   totalAmount: subtotalAfterOffer + shippingCost,
@@ -453,8 +457,8 @@ const CheckoutPage = () => {
                 item.price ||
                 0;
               return `${item.name} (x${item.quantity}) - ₹${(
-                itemPrice * item.quantity
-              ).toFixed(2)}`;
+                Number(itemPrice) * item.quantity
+              ).toFixed(2)}${item.shirtSize ? ` [Size: ${item.shirtSize}]` : ""}`;
             })
             .join(", "),
           customer_id: formData.email,
@@ -576,16 +580,7 @@ const CheckoutPage = () => {
       return;
     }
 
-    if (formData.paymentMethod === "cod" && !isCodEligible) {
-      toast({
-        title: "COD Not Available",
-        description:
-          "Cash on Delivery is only available for orders ₹449 and above.",
-        variant: "destructive",
-      });
-      setIsProcessing(false);
-      return;
-    }
+    // COD check removed
 
     // Generate order number at the beginning so it's available for both payment methods
     const timestamp = Date.now().toString().slice(-6);
@@ -601,130 +596,7 @@ const CheckoutPage = () => {
         return;
       }
 
-      // Simulate order processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Claim the offer if available
-      const offerClaimed = await claimOffer();
-
-      // Create order object with discounted prices
-      const order = {
-        customerName: formData.fullName,
-        customerEmail: formData.email,
-        customerPhone: formData.phone,
-        shippingAddress: `${formData.address}, ${formData.apartment}, ${formData.city}, ${formData.state} - ${formData.zipCode}`,
-        items: items.map((item) => ({
-          productId: item._id || item.id,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.discountedPrice || item.price || 0,
-          image: item.image,
-        })),
-        totalAmount: subtotalAfterOffer + shippingCost,
-        status: "pending",
-        paymentMethod: formData.paymentMethod,
-        paymentStatus: "pending",
-      };
-
-      // Send order to backend to save in database
-      try {
-        const orderData = {
-          customerName: formData.fullName,
-          customerEmail: formData.email,
-          customerPhone: formData.phone,
-          shippingAddress: `${formData.address}, ${formData.apartment}, ${formData.city}, ${formData.state} - ${formData.zipCode}`,
-          items: items.map((item) => ({
-            productId: item._id || item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.discountedPrice || item.price || 0,
-            // Removed image to reduce payload size
-          })),
-          totalAmount: subtotalAfterOffer + shippingCost + codFee,
-          status: "pending",
-          paymentMethod: formData.paymentMethod,
-          paymentStatus: "pending",
-          orderNumber: orderNumber,
-        };
-
-        console.log("Sending COD order to backend:", orderData);
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/admin/orders`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-admin-token": "saaj123", // Hardcoded admin token for now
-            },
-            body: JSON.stringify(orderData),
-          }
-        );
-
-        console.log("COD order creation response status:", response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("COD order creation failed:", errorText);
-          throw new Error(`Failed to save order to backend: ${errorText}`);
-        }
-
-        const savedOrder = await response.json();
-        console.log("COD order saved to database:", savedOrder);
-      } catch (backendError) {
-        console.error("Error saving COD order to backend:", backendError);
-        // Show error to user but continue with order confirmation
-        toast({
-          title: "Order Processing",
-          description:
-            "Your order was placed successfully, but we encountered an issue saving your order details. Don't worry - our team will process your order manually and you'll receive a confirmation email shortly.",
-          variant: "destructive",
-          duration: 10000,
-        });
-        // Continue with order confirmation even if backend save fails
-      }
-
-      // Clear cart
-      clearCart();
-
-      // Show success message with discount information
-      if (offerClaimed) {
-        toast({
-          title: "Order Placed Successfully with 10% Discount!",
-          description: `Your order has been confirmed with a 10% discount. You'll receive an email confirmation shortly.`,
-          duration: 5000,
-        });
-      } else {
-        toast({
-          title: "Order Placed Successfully!",
-          description: `Your order has been confirmed. You'll receive an email confirmation shortly.`,
-          duration: 5000,
-        });
-      }
-
-      // Navigate to order confirmation
-      const totalItems = items.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
-      navigate(`/order-confirmation`, {
-        state: {
-          items: [...items],
-          totalItems: totalItems,
-          totalAmount: subtotalAfterOffer + shippingCost + codFee,
-          shippingAddress: {
-            fullName: formData.fullName,
-            address: formData.address,
-            apartment: formData.apartment,
-            city: formData.city,
-            state: formData.state,
-            zipCode: formData.zipCode,
-            phone: formData.phone,
-          },
-          paymentMethod: formData.paymentMethod || "cod",
-          orderNumber: orderNumber,
-        },
-      });
+      // COD logic removed
     } catch (error) {
       console.error("Error processing order:", error);
       toast({
@@ -1034,19 +906,34 @@ const CheckoutPage = () => {
                       />
                       <Label
                         htmlFor="razorpay"
-                        className="cursor-pointer flex items-center"
+                        className="cursor-pointer flex items-center gap-2"
                       >
                         <span>Razorpay</span>
-                        <div className="flex items-center ml-2">
-                          <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full font-medium">
                             Secure
                           </span>
+                          {import.meta.env.VITE_RAZORPAY_KEY_ID?.startsWith('rzp_test') && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600 bg-amber-50 animate-pulse">
+                              Test Mode
+                            </Badge>
+                          )}
                         </div>
                       </Label>
                     </div>
 
                     {formData.paymentMethod === "razorpay" && (
                       <div className="space-y-4 pl-6">
+                        {import.meta.env.VITE_RAZORPAY_KEY_ID?.startsWith('rzp_test') && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 mb-2">
+                            <p className="font-bold mb-1">🛠️ Testing Instructions:</p>
+                            <ul className="list-disc pl-4 space-y-1">
+                              <li>Card: Use <code className="bg-amber-100 px-1">4111 1111 1111 1111</code></li>
+                              <li>UPI: Use <code className="bg-amber-100 px-1">success@razorpay</code></li>
+                              <li>Netbanking: Select any bank & click "Success"</li>
+                            </ul>
+                          </div>
+                        )}
                         <div className="flex flex-col items-center justify-center p-4 border rounded-md bg-gray-50">
                           <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-3">
                             <CreditCard className="w-8 h-8 text-white" />
@@ -1060,51 +947,7 @@ const CheckoutPage = () => {
                     )}
                   </div>
 
-                  {/* Cash on Delivery Option */}
-                  <div className="border rounded-md p-3 mt-3">
-                    <div className="flex items-center mb-4">
-                      <input
-                        type="radio"
-                        id="cod"
-                        name="paymentMethod"
-                        value="cod"
-                        checked={formData.paymentMethod === "cod"}
-                        disabled={!isCodEligible}
-                        onChange={() =>
-                          isCodEligible
-                            ? handleInputChange("paymentMethod", "cod")
-                            : null
-                        }
-                        className="mr-2"
-                      />
-                      <Label
-                        htmlFor="cod"
-                        className={
-                          isCodEligible
-                            ? "cursor-pointer flex items-center"
-                            : "flex items-center opacity-50"
-                        }
-                      >
-                        <span>Cash on Delivery</span>
-                        {!isCodEligible && (
-                          <span className="ml-2 text-[10px] text-destructive">
-                            Min order ₹449 for COD
-                          </span>
-                        )}
-                      </Label>
-                    </div>
-
-                    {formData.paymentMethod === "cod" && (
-                      <div className="space-y-4 pl-6">
-                        <div className="p-4 border rounded-md bg-gray-50">
-                          <p className="text-sm text-muted-foreground">
-                            Pay with cash upon delivery. ₹49 COD charges
-                            applicable.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {/* Cash on Delivery Option Removed */}
                 </div>
               </Card>
 
@@ -1331,60 +1174,85 @@ const CheckoutPage = () => {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="border-b pb-4">
-                  <div className="flex justify-between mb-2">
-                    <span>Items</span>
-                    <span>₹{discountedSubtotal.toFixed(2)}</span>
+              <div className="space-y-6">
+                <div className="border-b border-rose-100 pb-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-bold text-lg">Order Summary</span>
+                    <Badge variant="secondary">{totalItems} Items</Badge>
                   </div>
 
-                  {offerDiscount > 0 && (
-                    <div className="flex justify-between mb-2">
-                      <span>10% Limited Offer Discount</span>
-                      <span className="text-green-600">
-                        -₹{offerDiscount.toFixed(2)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between mb-2">
-                    <span>Shipping</span>
-                    <span>₹{shippingCost}</span>
+                  <div className="max-h-60 overflow-y-auto mb-4 space-y-3 pr-2 scrollbar-thin">
+                    {items.map((item, i) => (
+                      <div key={i} className="flex gap-3 text-sm border-b border-rose-50 pb-2 last:border-0">
+                        <div className="w-12 h-12 rounded bg-white flex-shrink-0 overflow-hidden border">
+                          <img 
+                            src={(() => {
+                              if (Array.isArray(item.media) && item.media.length > 0) {
+                                const firstM = item.media[0];
+                                return typeof firstM === 'string' ? firstM : (firstM.url || firstM);
+                              }
+                              return item.image || item.imageUrl || item.img || "https://placehold.co/100x100?text=No+Image";
+                            })()} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="text-muted-foreground text-[10px]">Qty: {item.quantity} × ₹{Number(item.discountedPrice || item.price || 0).toFixed(2)}</p>
+                          {item.shirtSize && <p className="text-[10px] text-accent font-semibold">Size: {item.shirtSize}</p>}
+                          {item.customRequest && <p className="text-[10px] italic text-muted-foreground truncate">"{item.customRequest}"</p>}
+                        </div>
+                        <div className="text-right font-medium text-xs">
+                          ₹{(Number(item.discountedPrice || item.price || 0) * item.quantity).toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {formData.paymentMethod === "cod" && (
-                    <div className="flex justify-between mb-2">
-                      <span>COD Charges</span>
-                      <span>₹{codFee}</span>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium">₹{Number(discountedSubtotal).toFixed(2)}</span>
                     </div>
-                  )}
+
+                    {offerDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>10% Offer Discount</span>
+                        <span>-₹{Number(offerDiscount).toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span>{shippingCost === 0 ? "Free" : `₹${shippingCost}`}</span>
+                    </div>
+
+                    {/* COD charges removed */}
+                  </div>
                 </div>
 
                 {/* Offer Information */}
                 {hasClaimedOffer && remainingOffers > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 animate-pulse">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">🎉</span>
-                        <span className="text-green-800 font-bold">
-                          Limited Time Offer
-                        </span>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3 animate-pulse">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className="text-lg">🎉</span>
+                        <span className="text-green-800 font-bold">Offer Applied</span>
                       </div>
-                      <div className="flex items-center">
-                        <span className="bg-green-200 text-green-800 text-xs font-bold px-3 py-1 rounded-full">
-                          {remainingOffers} Left
-                        </span>
-                      </div>
+                      <span className="bg-green-200 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {remainingOffers} Left
+                      </span>
                     </div>
-                    <p className="text-green-700 text-sm font-medium">
-                      You've claimed your 10% discount!
+                    <p className="text-green-700 text-xs font-medium">
+                      You've saved 10% on this order!
                     </p>
                   </div>
                 )}
 
-                <div className="flex justify-between font-bold text-xl bg-gradient-to-r from-rose-50 to-amber-50 rounded-lg p-4 border-2 border-rose-200 mt-4">
+                <div className="flex justify-between font-bold text-lg bg-gradient-to-r from-rose-50 to-amber-50 rounded-lg p-4 border-2 border-rose-200">
                   <span className="text-foreground">Total</span>
-                  <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent text-2xl">
-                    ₹{(subtotalAfterOffer + shippingCost + codFee).toFixed(2)}
+                  <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent text-xl">
+                    ₹{(Number(subtotalAfterOffer) + Number(shippingCost) + Number(codFee)).toFixed(2)}
                   </span>
                 </div>
               </div>

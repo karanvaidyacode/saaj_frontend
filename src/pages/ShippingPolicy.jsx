@@ -33,8 +33,7 @@ const ShippingPolicy = () => {
               Shipping Fee
             </h2>
             <ul className="list-disc pl-8 text-gray-700 mb-6 space-y-2">
-              <li>A flat fee of ₹69 is applied to all orders with a cart value of less than ₹799.</li>
-              <li>Orders with a cart value of ₹799 or more will enjoy free shipping.</li>
+              <li>A flat fee of ₹69 is applied to all orders.</li>
               <li>Please note: The shipping fee is non-refundable under any circumstances.</li>
             </ul>
             

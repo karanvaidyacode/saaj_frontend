@@ -12,6 +12,9 @@ import studsImg from "@/assets/Studs.jpg";
 import jhumkaImg from "@/assets/Jhumka.jpg";
 import customPackagingImg from "@/assets/CustomPackaging.jpg";
 import bouquetImg from "@/assets/Bouquet.jpg";
+import jhumkaboxImg from "@/assets/Jhumkabox.jpg";
+import menshamperImg from "@/assets/Men'shamper.jpg";
+import chocolatetowerImg from "@/assets/Chocolatetower.jpg";
 import { useNavigate } from "react-router-dom";
 
 const categories = [
@@ -29,6 +32,10 @@ const categories = [
   { name: "Hamper", image: hamperImg },
   { name: "Custom Packaging", image: customPackagingImg },
   { name: "Bouquet", image: bouquetImg },
+  { name: "Jhumka Box", image: jhumkaboxImg },  
+  { name: "Men's Hamper", image: menshamperImg },  
+  { name: "Chocolate Tower", image: chocolatetowerImg },  
+
 ];
 
 const CategoriesSection = () => {

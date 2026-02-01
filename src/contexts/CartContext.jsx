@@ -130,7 +130,21 @@ export const CartProvider = ({ children }) => {
     let items = [...cartState.items];
     // Use _id for database products, fallback to id for static data
     const productId = product._id || product.id;
-    const idx = items.findIndex((i) => (i._id || i.id) === productId);
+    
+    // Uniqueness check should include customization
+    const getCustomKey = (p) => {
+      const keys = {
+        id: p._id || p.id,
+        customRequest: p.customRequest || "",
+        shirtSize: p.shirtSize || "",
+        customPhotos: JSON.stringify(p.customPhotos || [])
+      };
+      return JSON.stringify(keys);
+    };
+
+    const targetKey = getCustomKey(product);
+    const idx = items.findIndex((i) => getCustomKey(i) === targetKey);
+    
     if (idx !== -1) {
       items[idx] = { ...items[idx], quantity: items[idx].quantity + quantity };
     } else {

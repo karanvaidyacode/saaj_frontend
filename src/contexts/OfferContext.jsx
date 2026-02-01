@@ -12,7 +12,7 @@ export const OfferProvider = ({ children }) => {
   // Initialize remaining offers from localStorage or default to 30
   const [remainingOffers, setRemainingOffers] = useState(() => {
     const stored = localStorage.getItem(REMAINING_OFFERS_KEY);
-    return stored ? parseInt(stored, 10) : 30;
+    return stored ? parseInt(stored, 10) : 5;
   });
 
   // Track if current user has claimed an offer
@@ -68,6 +68,7 @@ export const OfferProvider = ({ children }) => {
         // Sync with backend first
         const response = await fetchApi("/offers/claim", {
           method: "POST",
+          body: JSON.stringify({ email: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).email : null })
         });
         
         if (response && response.success) {
@@ -97,13 +98,14 @@ export const OfferProvider = ({ children }) => {
   };
 
   // Function to set offer as claimed (used when user logs in or claims via modal)
-  const setOfferClaimed = async (couponCode = null) => {
+  const setOfferClaimed = async (couponCode = null, email = null) => {
     if (!hasClaimedOffer) {
       try {
         // Sync with backend first
         if (remainingOffers > 0) {
           const response = await fetchApi("/offers/claim", {
             method: "POST",
+            body: email ? JSON.stringify({ email }) : null
           });
           
           if (response && response.success) {
@@ -144,10 +146,10 @@ export const OfferProvider = ({ children }) => {
 
   // Function to reset offers (for testing/admin purposes)
   const resetOffers = () => {
-    setRemainingOffers(30);
+    setRemainingOffers(5);
     setHasClaimedOffer(false);
     localStorage.removeItem(OFFER_STORAGE_KEY);
-    localStorage.setItem(REMAINING_OFFERS_KEY, "30");
+    localStorage.setItem(REMAINING_OFFERS_KEY, "5");
   };
 
   // Helper function to update remaining offers (used when backend already decremented)

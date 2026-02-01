@@ -11,8 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { Edit, Trash2, Plus, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Edit, Trash2, Plus, Eye, EyeOff, RefreshCw, Scissors } from "lucide-react";
 import { fetchApi } from "../../lib/api";
+import Cropper from "react-easy-crop";
+import { getCroppedImgFile } from "../../utils/cropImage";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../components/ui/dialog";
 
 const ProductManagement = () => {
   const [products, setProducts] = useState([]);
@@ -26,7 +35,8 @@ const ProductManagement = () => {
     name: "",
     originalPrice: "",
     discountedPrice: "",
-    image: "",
+    mediaFiles: [],
+    quantity: 1,
     description: "",
     category: "",
     rating: 4.5,
@@ -37,6 +47,15 @@ const ProductManagement = () => {
   const [editDragActive, setEditDragActive] = useState(false);
   const [editImagePreview, setEditImagePreview] = useState("");
   const [deleteId, setDeleteId] = useState(null);
+
+  // Cropping State
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [isEditCrop, setIsEditCrop] = useState(false);
+  const [currentFileToCrop, setCurrentFileToCrop] = useState(null);
 
   // Predefined categories from CategoriesSection
   const categories = [
@@ -54,6 +73,9 @@ const ProductManagement = () => {
     "Jhumka",
     "Custom Packaging",
     "Bouquet",
+    "Chocolate Tower",
+    "Jhumka Box",
+    "Men's Hamper",
   ];
 
   // Fetch products
@@ -87,59 +109,6 @@ const ProductManagement = () => {
     }
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (!file.type.startsWith("image/")) {
-        setMessage("Please upload an image file");
-        return;
-      }
-
-      // Create a preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-
-      // Store the file for upload - don't use the blob URL as the image path
-      setAddForm((f) => ({ ...f, imageFile: file, imagePreview: previewUrl }));
-      setMessage("Image selected successfully");
-    }
-  };
-
-  // Handle file input change
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith("image/")) {
-        setMessage("Please upload an image file");
-        return;
-      }
-
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-
-      // Store the file for upload - don't use the blob URL as the image path
-      setAddForm((f) => ({ ...f, imageFile: file, imagePreview: previewUrl }));
-      setMessage("Image selected successfully");
-    }
-  };
-
-  // Handle drag events for edit form
   const handleEditDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -150,16 +119,93 @@ const ProductManagement = () => {
     }
   };
 
-  const handleEditDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEditDragActive(true);
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
   };
 
-  const handleEditDragLeave = (e) => {
+  const applyCrop = async () => {
+    try {
+      const croppedFile = await getCroppedImgFile(
+        imageToCrop,
+        croppedAreaPixels,
+        currentFileToCrop.name
+      );
+      
+      const preview = {
+        url: URL.createObjectURL(croppedFile),
+        type: "image",
+        file: croppedFile
+      };
+
+      if (isEditCrop) {
+        setEditForm((f) => ({ ...f, newMediaFiles: [...(f.newMediaFiles || []), preview] }));
+      } else {
+        setAddForm((f) => ({ ...f, mediaFiles: [...(f.mediaFiles || []), preview] }));
+      }
+      
+      setCropModalOpen(false);
+      setImageToCrop(null);
+      setCurrentFileToCrop(null);
+      setMessage("Image cropped successfully");
+    } catch (e) {
+      console.error(e);
+      setMessage("Error cropping image");
+    }
+  };
+
+  const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setEditDragActive(false);
+    setDragActive(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const mediaFiles = files.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/"));
+    
+    if (mediaFiles.length === 0) {
+      setMessage("Please upload image or video files");
+      return;
+    }
+
+    if (mediaFiles.length === 1 && mediaFiles[0].type.startsWith("image/")) {
+      setIsEditCrop(false);
+      setImageToCrop(URL.createObjectURL(mediaFiles[0]));
+      setCurrentFileToCrop(mediaFiles[0]);
+      setCropModalOpen(true);
+    } else {
+      const previews = mediaFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith("video/") ? "video" : "image",
+        file
+      }));
+      setAddForm((f) => ({ ...f, mediaFiles: [...(f.mediaFiles || []), ...previews] }));
+    }
+    setMessage(`${mediaFiles.length} files processed`);
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const mediaFiles = files.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/"));
+      
+      if (mediaFiles.length === 0) {
+        setMessage("Please upload image or video files");
+        return;
+      }
+
+      if (mediaFiles.length === 1 && mediaFiles[0].type.startsWith("image/")) {
+        setIsEditCrop(false);
+        setImageToCrop(URL.createObjectURL(mediaFiles[0]));
+        setCurrentFileToCrop(mediaFiles[0]);
+        setCropModalOpen(true);
+      } else {
+        const previews = mediaFiles.map(file => ({
+          url: URL.createObjectURL(file),
+          type: file.type.startsWith("video/") ? "video" : "image",
+          file
+        }));
+        setAddForm((f) => ({ ...f, mediaFiles: [...(f.mediaFiles || []), ...previews] }));
+      }
+    }
   };
 
   const handleEditDrop = (e) => {
@@ -167,38 +213,52 @@ const ProductManagement = () => {
     e.stopPropagation();
     setEditDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (!file.type.startsWith("image/")) {
-        setMessage("Please upload an image file");
-        return;
-      }
+    const files = Array.from(e.dataTransfer.files);
+    const mediaFiles = files.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/"));
+    
+    if (mediaFiles.length === 0) {
+      setMessage("Please upload image or video files");
+      return;
+    }
 
-      // Create a preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setEditImagePreview(previewUrl);
-
-      // Store the file for upload - don't use the blob URL as the image path
-      setEditForm((f) => ({ ...f, imageFile: file, imagePreview: previewUrl }));
-      setMessage("Image selected successfully");
+    if (mediaFiles.length === 1 && mediaFiles[0].type.startsWith("image/")) {
+      setIsEditCrop(true);
+      setImageToCrop(URL.createObjectURL(mediaFiles[0]));
+      setCurrentFileToCrop(mediaFiles[0]);
+      setCropModalOpen(true);
+    } else {
+      const previews = mediaFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        type: file.type.startsWith("video/") ? "video" : "image",
+        file
+      }));
+      setEditForm((f) => ({ ...f, newMediaFiles: [...(f.newMediaFiles || []), ...previews] }));
     }
   };
 
-  // Handle file input change for edit form
   const handleEditFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith("image/")) {
-        setMessage("Please upload an image file");
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const mediaFiles = files.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/"));
+      
+      if (mediaFiles.length === 0) {
+        setMessage("Please upload image or video files");
         return;
       }
 
-      const previewUrl = URL.createObjectURL(file);
-      setEditImagePreview(previewUrl);
-
-      // Store the file for upload - don't use the blob URL as the image path
-      setEditForm((f) => ({ ...f, imageFile: file, imagePreview: previewUrl }));
-      setMessage("Image selected successfully");
+      if (mediaFiles.length === 1 && mediaFiles[0].type.startsWith("image/")) {
+        setIsEditCrop(true);
+        setImageToCrop(URL.createObjectURL(mediaFiles[0]));
+        setCurrentFileToCrop(mediaFiles[0]);
+        setCropModalOpen(true);
+      } else {
+        const previews = mediaFiles.map(file => ({
+          url: URL.createObjectURL(file),
+          type: file.type.startsWith("video/") ? "video" : "image",
+          file
+        }));
+        setEditForm((f) => ({ ...f, newMediaFiles: [...(f.newMediaFiles || []), ...previews] }));
+      }
     }
   };
 
@@ -213,13 +273,14 @@ const ProductManagement = () => {
       if (!addForm.name) throw new Error("Name is required");
       if (!addForm.originalPrice) throw new Error("Original price is required");
       if (!addForm.category) throw new Error("Category is required");
-      if (!addForm.imageFile) throw new Error("Image is required");
+      if (!addForm.mediaFiles || addForm.mediaFiles.length === 0) throw new Error("At least one image or video is required");
 
       // Validate numeric fields
       const originalPrice = parseFloat(addForm.originalPrice);
       const discountedPrice = addForm.discountedPrice
         ? parseFloat(addForm.discountedPrice)
         : originalPrice;
+      const quantity = parseInt(addForm.quantity) || 0;
 
       if (isNaN(originalPrice))
         throw new Error("Original price must be a valid number");
@@ -239,7 +300,13 @@ const ProductManagement = () => {
       );
       formData.append("category", addForm.category.trim());
       formData.append("rating", Number(addForm.rating) || 4.5);
-      formData.append("image", addForm.imageFile); // Append the image file
+      formData.append("quantity", quantity);
+      
+
+      // Append all media files
+      addForm.mediaFiles.forEach(m => {
+        formData.append("media", m.file);
+      });
 
       // Get admin token from localStorage
       const adminToken = localStorage.getItem("adminToken");
@@ -261,10 +328,10 @@ const ProductManagement = () => {
         name: "",
         originalPrice: "",
         discountedPrice: "",
-        imageFile: null,
-        imagePreview: "",
+        mediaFiles: [],
         description: "",
         category: "",
+        quantity: 1,
         rating: 4.5,
       });
       setImagePreview("");
@@ -325,12 +392,18 @@ const ProductManagement = () => {
       );
       formData.append("category", editForm.category.trim());
       formData.append("rating", Number(editForm.rating) || 4.5);
+      formData.append("quantity", parseInt(editForm.quantity) || 0);
 
-      // If a new image was uploaded, append it; otherwise use existing image URL
-      if (editForm.imageFile) {
-        formData.append("image", editForm.imageFile); // Append the new image file
-      } else {
-        formData.append("image", editForm.image || "/images/placeholder.jpg"); // Use existing image URL
+
+      // Append existing media if not deleted
+      const existingMedia = editForm.media || [];
+      formData.append("media", JSON.stringify(existingMedia));
+
+      // If a new media files were uploaded, append them
+      if (editForm.newMediaFiles) {
+        editForm.newMediaFiles.forEach(m => {
+          formData.append("media", m.file);
+        });
       }
 
       // Get admin token from localStorage
@@ -477,6 +550,21 @@ const ProductManagement = () => {
           </div>
 
           <div>
+            <label className="block text-sm font-medium mb-1">
+              Quantity / Stock
+            </label>
+            <Input
+              type="number"
+              placeholder="Enter available quantity"
+              value={addForm.quantity}
+              onChange={(e) =>
+                setAddForm({ ...addForm, quantity: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium mb-1">Category</label>
             <Select
               value={addForm.category}
@@ -511,6 +599,7 @@ const ProductManagement = () => {
             />
           </div>
 
+
           <div
             className={`md:col-span-3 border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
               dragActive
@@ -524,29 +613,71 @@ const ProductManagement = () => {
           >
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
+              multiple
               onChange={handleFileChange}
               className="hidden"
               id="image-upload"
             />
             <label htmlFor="image-upload" className="cursor-pointer">
-              {imagePreview ? (
-                <div>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-32 object-cover rounded-lg mb-2"
-                  />
-                  <p className="text-sm text-gray-600">Click to change image</p>
+              {addForm.mediaFiles && addForm.mediaFiles.length > 0 ? (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {addForm.mediaFiles.map((m, i) => (
+                    <div key={i} className="relative w-24 h-24">
+                      {m.type === "video" ? (
+                        <div className="w-full h-full bg-black rounded flex items-center justify-center text-white text-[10px]">VIDEO</div>
+                      ) : (
+                        <img
+                          src={m.url}
+                          alt="Preview"
+                          className="w-full h-full object-cover rounded shadow"
+                        />
+                      )}
+                      <div className="absolute top-1 right-1 flex gap-1">
+                        {m.type === "image" && (
+                          <button
+                            className="bg-blue-500 text-white rounded-full p-1 opacity-80 hover:opacity-100"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setImageToCrop(m.url);
+                              setCurrentFileToCrop(m.file);
+                              setIsEditCrop(false);
+                              // We need to remove the image first then add the cropped one
+                              const updated = [...addForm.mediaFiles];
+                              updated.splice(i, 1);
+                              setAddForm({...addForm, mediaFiles: updated});
+                              setCropModalOpen(true);
+                            }}
+                          >
+                            <Scissors className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button 
+                          className="bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const updated = [...addForm.mediaFiles];
+                            updated.splice(i, 1);
+                            setAddForm({...addForm, mediaFiles: updated});
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400">
+                    <Plus className="w-6 h-6" />
+                  </div>
                 </div>
               ) : (
                 <div className="h-32 flex flex-col items-center justify-center">
                   <Plus className="h-8 w-8 text-gray-400 mb-2" />
                   <p className="text-gray-600">
-                    Drag & drop an image here, or click to select
+                    Drag & drop photos/videos here, or click to select
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Supports JPG, PNG, GIF
+                    Supports JPG, PNG, GIF, MP4
                   </p>
                 </div>
               )}
@@ -606,9 +737,15 @@ const ProductManagement = () => {
                     className="border-b hover:bg-gray-50"
                   >
                     <td className="p-4">
-                      <div className="flex items-center">
+                      <div className="relative">
                         <img
-                          src={product.image}
+                          src={(() => {
+                            if (Array.isArray(product.media) && product.media.length > 0) {
+                              const firstM = product.media[0];
+                              return typeof firstM === 'string' ? firstM : firstM.url;
+                            }
+                            return product.image || product.imageUrl || product.img || "/images/placeholder.svg";
+                          })()}
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded mr-3"
                           onError={(e) => {
@@ -616,11 +753,20 @@ const ProductManagement = () => {
                               "https://placehold.co/100x100?text=No+Image";
                           }}
                         />
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {product.description.substring(0, 50)}...
-                          </div>
+                        {product.media && product.media.length > 1 && (
+                          <Badge className="absolute -top-2 -right-1 text-[10px] px-1 h-4 min-w-4 justify-center" variant="secondary">
+                            +{product.media.length - 1}
+                          </Badge>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {product.name}
+                          {Number(product.quantity) <= 0 && <Badge variant="destructive">Sold Out</Badge>}
+                          {Number(product.quantity) > 0 && Number(product.quantity) <= 5 && <Badge variant="warning">Low Stock ({product.quantity})</Badge>}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {product.description.substring(0, 50)}...
                         </div>
                       </div>
                     </td>
@@ -640,19 +786,29 @@ const ProductManagement = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            setEditing(product.id || product._id);
-                            setEditForm({
-                              name: product.name,
-                              originalPrice: product.originalPrice,
-                              discountedPrice: product.discountedPrice,
-                              image: product.image,
-                              description: product.description,
-                              category: product.category,
-                              rating: product.rating || 4.5,
-                            });
-                            setEditImagePreview(product.image);
-                          }}
+                           onClick={() => {
+                             setEditing(product.id || product._id);
+                             setEditForm({
+                               name: product.name,
+                               originalPrice: product.originalPrice,
+                               discountedPrice: product.discountedPrice,
+                               media: product.media,
+                               image: product.image, // Include legacy image
+                               description: product.description,
+                               category: product.category,
+                               quantity: product.quantity,
+                               rating: product.rating || 4.5,
+                             });
+                             
+                             let preview = "";
+                             if (Array.isArray(product.media) && product.media.length > 0) {
+                               const firstM = product.media[0];
+                               preview = typeof firstM === 'string' ? firstM : firstM.url;
+                             } else {
+                               preview = product.image || product.imageUrl || product.img || "";
+                             }
+                             setEditImagePreview(preview);
+                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -741,7 +897,7 @@ const ProductManagement = () => {
                   </div>
                 </div>
 
-                <div>
+                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Category
                   </label>
@@ -762,6 +918,22 @@ const ProductManagement = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                 <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Quantity
+                    </label>
+                    <Input
+                      type="number"
+                      value={editForm.quantity || 0}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, quantity: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -791,31 +963,95 @@ const ProductManagement = () => {
                 >
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
+                    multiple
                     onChange={handleEditFileChange}
                     className="hidden"
                     id="edit-image-upload"
                   />
                   <label htmlFor="edit-image-upload" className="cursor-pointer">
-                    {editImagePreview || editForm.image ? (
-                      <div>
-                        <img
-                          src={editImagePreview || editForm.image}
-                          alt="Preview"
-                          className="w-full h-32 object-cover rounded-lg mb-2"
-                        />
-                        <p className="text-sm text-gray-600">
-                          Click to change image
-                        </p>
+                    {(editForm.media?.length > 0 || editForm.newMediaFiles?.length > 0 || editForm.image) ? (
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {/* Legacy Image Fallback */}
+                        {(!editForm.media || editForm.media.length === 0) && (editForm.image || editForm.imageUrl || editForm.img) && (
+                          <div className="relative w-24 h-24">
+                            <img src={editForm.image || editForm.imageUrl || editForm.img} className="w-full h-full object-cover rounded shadow border-2 border-amber-200" />
+                            <div className="absolute -top-2 -left-2 bg-amber-500 text-[8px] text-white px-1 rounded uppercase font-bold">Legacy</div>
+                          </div>
+                        )}
+                        {/* Existing Media */}
+                        {editForm.media && editForm.media.map((m, i) => (
+                          <div key={`old-${i}`} className="relative w-24 h-24">
+                            {m.type === "video" ? (
+                              <div className="w-full h-full bg-black rounded flex items-center justify-center text-white text-[10px]">VIDEO</div>
+                            ) : (
+                              <img src={typeof m === 'string' ? m : m.url} className="w-full h-full object-cover rounded shadow" />
+                            )}
+                            <button 
+                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                const updated = [...editForm.media];
+                                updated.splice(i, 1);
+                                setEditForm({...editForm, media: updated});
+                              }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {/* New Media Previews */}
+                        {editForm.newMediaFiles && editForm.newMediaFiles.map((m, i) => (
+                          <div key={`new-${i}`} className="relative w-24 h-24 border-2 border-blue-400 rounded">
+                            {m.type === "video" ? (
+                              <div className="w-full h-full bg-black rounded flex items-center justify-center text-white text-[10px]">NEW VIDEO</div>
+                            ) : (
+                              <img src={m.url} className="w-full h-full object-cover rounded" />
+                            )}
+                             <div className="absolute top-1 right-1 flex gap-1">
+                               {m.type === "image" && (
+                                <button
+                                  className="bg-blue-500 text-white rounded-full p-1 opacity-80 hover:opacity-100"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setImageToCrop(m.url);
+                                    setCurrentFileToCrop(m.file);
+                                    setIsEditCrop(true);
+                                    const updated = [...editForm.newMediaFiles];
+                                    updated.splice(i, 1);
+                                    setEditForm({...editForm, newMediaFiles: updated});
+                                    setCropModalOpen(true);
+                                  }}
+                                >
+                                  <Scissors className="w-3 h-3" />
+                                </button>
+                               )}
+                               <button
+                                 className="bg-red-500 text-white rounded-full p-1 opacity-80 hover:opacity-100"
+                                 onClick={(e) => {
+                                   e.preventDefault();
+                                   const updated = [...editForm.newMediaFiles];
+                                   updated.splice(i, 1);
+                                   setEditForm({...editForm, newMediaFiles: updated});
+                                 }}
+                               >
+                                 <Trash2 className="w-3 h-3" />
+                               </button>
+                             </div>
+                          </div>
+                        ))}
+                        <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-400">
+                          <Plus className="w-6 h-6" />
+                        </div>
                       </div>
                     ) : (
                       <div className="h-32 flex flex-col items-center justify-center">
                         <Plus className="h-8 w-8 text-gray-400 mb-2" />
                         <p className="text-gray-600">
-                          Drag & drop an image here, or click to select
+                          Drag & drop photos/videos here, or click to select
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Supports JPG, PNG, GIF
+                          Supports JPG, PNG, GIF, MP4
                         </p>
                       </div>
                     )}
@@ -850,6 +1086,50 @@ const ProductManagement = () => {
           </Card>
         </div>
       )}
+      {/* Cropper Modal */}
+      <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Crop Image</DialogTitle>
+          </DialogHeader>
+          <div className="relative h-80 w-full bg-black rounded-lg overflow-hidden">
+            {imageToCrop && (
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1} // You can change this or make it dynamic
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            )}
+          </div>
+          <div className="mt-4 flex items-center gap-4">
+            <span className="text-sm font-medium">Zoom</span>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setCropModalOpen(false);
+              setImageToCrop(null);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={applyCrop}>
+              Apply Crop
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

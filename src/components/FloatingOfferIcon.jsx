@@ -79,8 +79,8 @@ export default function FloatingOfferIcon() {
     }
   };
 
-  // Don't show if user has claimed offer or is authenticated
-  if (isAuthenticated || hasClaimedOffer || !showIcon) {
+  // Don't show if user has claimed offer, is authenticated, or no offers left
+  if (isAuthenticated || hasClaimedOffer || !showIcon || remainingOffers <= 0) {
     return null;
   }
 

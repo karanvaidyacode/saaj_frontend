@@ -42,8 +42,11 @@ export async function fetchApi(endpoint, options = {}) {
 
     if (!res.ok) {
       const message =
-        (data && (data.detail || data.message || data)) ||
-        `HTTP error ${res.status}`;
+        (data && (data.error || data.message || data.detail)) 
+          ? (typeof (data.error || data.message || data.detail) === 'object' 
+              ? JSON.stringify(data.error || data.message || data.detail) 
+              : (data.error || data.message || data.detail))
+          : `HTTP error ${res.status}`;
       const error = new Error(message);
       error.status = res.status;
       throw error;

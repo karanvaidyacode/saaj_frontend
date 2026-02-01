@@ -2,10 +2,9 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const announcements = [
-  "🎁 Free shipping on prepaid orders above ₹799/-",
-  "📢 Cash on delivery [COD] available on orders above ₹449/-",
   "📦 Order delivery time 5-7 working days",
-  "📹 Note: Unboxing video compulsory for claims"
+  "📹 Note: Unboxing video compulsory for claims",
+  "🚚 Pan India shipping available"
 ];
 
 const AnnouncementBar = () => {

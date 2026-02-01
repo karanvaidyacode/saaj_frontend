@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Check, Star } from "lucide-react";
+import ImagePreviewModal from "@/components/ui/ImagePreviewModal";
 
 const ProductsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -35,10 +36,18 @@ const ProductsPage = () => {
     "Hamper",
     "Custom Packaging",
     "Bouquet",
+    "Chocolate Tower",
+    "Jhumka Box",
+    "Men's Hamper",
   ];
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Image preview modal state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState("");
+  const [previewImageAlt, setPreviewImageAlt] = useState("");
 
   // Fetch products from API
   useEffect(() => {
@@ -48,15 +57,23 @@ const ProductsPage = () => {
         const data = await fetchApi("/api/products");
         // Filter out any products with blob URLs and replace with placeholder
         const filteredData = Array.isArray(data) ? data.map(product => {
-          // Check if the image is a blob URL
-          if (product.image && product.image.startsWith('blob:')) {
-            // Replace blob URLs with placeholder image
-            return {
-              ...product,
-              image: '/images/placeholder.jpg'
-            };
+          // Derive image from media or legacy fields
+          let imageUrl = product.image || product.imageUrl || product.img;
+          
+          if (!imageUrl && Array.isArray(product.media) && product.media.length > 0) {
+            const firstMedia = product.media[0];
+            imageUrl = typeof firstMedia === 'string' ? firstMedia : firstMedia.url;
           }
-          return product;
+
+          // Check if the image is a blob URL or invalid string or explicitly the old placeholder
+          if (imageUrl && (imageUrl.startsWith('blob:') || imageUrl === 'undefined' || imageUrl === '/images/placeholder.jpg')) {
+            imageUrl = '/images/placeholder.svg';
+          }
+          
+          return {
+            ...product,
+            image: imageUrl
+          };
         }) : [];
         setProducts(filteredData);
       } catch (error) {
@@ -95,6 +112,13 @@ const ProductsPage = () => {
         return newSet;
       });
     }, 2000);
+  };
+
+  const handleImageClick = (e, imageUrl, altText) => {
+    e.stopPropagation(); // Prevent navigation to product detail
+    setPreviewImageUrl(imageUrl);
+    setPreviewImageAlt(altText);
+    setIsPreviewOpen(true);
   };
 
   // Filter products based on selected category
@@ -167,11 +191,16 @@ const ProductsPage = () => {
                     src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    onClick={(e) => handleImageClick(e, product.image, product.name)}
                     onError={(e) => {
                       e.target.src = "https://placehold.co/400x400?text=No+Image";
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                  {/* Click to preview hint */}
+                  <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to preview
+                  </div>
                 </div>
 
                 <div className="p-3 sm:p-4">
@@ -237,6 +266,14 @@ const ProductsPage = () => {
           </div>
         )}
       </div>
+      
+      {/* Image Preview Modal */}
+      <ImagePreviewModal 
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        imageUrl={previewImageUrl}
+        altText={previewImageAlt}
+      />
     </div>
   );
 };

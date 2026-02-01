@@ -37,15 +37,23 @@ const ProductSlidingSection = ({
         const data = await fetchApi("/api/products");
         // Filter out any products with blob URLs and replace with placeholder
         const filteredData = Array.isArray(data) ? data.map(product => {
-          // Check if the image is a blob URL
-          if (product.image && product.image.startsWith('blob:')) {
-            // Replace blob URLs with placeholder image
-            return {
-              ...product,
-              image: '/images/placeholder.jpg'
-            };
+          // Derive image from media or legacy fields
+          let imageUrl = product.image || product.imageUrl || product.img;
+          
+          if (!imageUrl && Array.isArray(product.media) && product.media.length > 0) {
+            const firstMedia = product.media[0];
+            imageUrl = typeof firstMedia === 'string' ? firstMedia : firstMedia.url;
           }
-          return product;
+
+          // Check if the image is a blob URL or invalid string
+          if (imageUrl && (imageUrl.startsWith('blob:') || imageUrl === 'undefined' || imageUrl === '/images/placeholder.jpg')) {
+            imageUrl = '/images/placeholder.svg';
+          }
+          
+          return {
+            ...product,
+            image: imageUrl
+          };
         }) : [];
         setProducts(filteredData);
       } catch (error) {

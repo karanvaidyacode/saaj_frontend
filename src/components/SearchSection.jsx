@@ -62,7 +62,7 @@ const SearchSection = () => {
     setSearchResults([]);
     setShowResults(false);
     // Navigate to product detail page
-    navigate(`/products/${item._id}`);
+    navigate(`/products/${item._id || item.id}`);
   };
 
   // Handle add to cart from search results
@@ -144,9 +144,9 @@ const SearchSection = () => {
                   {searchResults.length !== 1 ? "s" : ""} - Press Enter to see
                   all
                 </p>
-                {searchResults.slice(0, 8).map((item) => (
+                {searchResults.slice(0, 8).map((item, index) => (
                   <div
-                    key={item._id}
+                    key={item._id || item.id || index}
                     onClick={() => handleResultClick(item)}
                     className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-secondary rounded-lg cursor-pointer transition-colors group"
                   >
@@ -157,7 +157,7 @@ const SearchSection = () => {
 
                     {/* Price */}
                     <span className="text-sm font-bold text-accent flex-shrink-0">
-                      ${item.discountedPrice || item.originalPrice || item.price}
+                      ₹{item.discountedPrice || item.originalPrice || item.price}
                     </span>
                   </div>
                 ))}

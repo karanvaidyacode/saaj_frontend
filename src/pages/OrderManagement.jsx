@@ -17,7 +17,9 @@ import {
   Menu,
   X,
   ListOrdered,
-  Copy
+  Copy,
+  MessageSquare,
+  Image as ImageIcon
 } from 'lucide-react';
 import { fetchApi } from '@/lib/api';
 import { useNavigate, useLocation } from "react-router-dom";
@@ -353,8 +355,9 @@ export default function OrderManagement() {
                     <tr className="border-b">
                       <th className="text-left p-4">Order Number</th>
                       <th className="text-left p-4">Customer</th>
-                      <th className="text-left p-4">Date</th>
+                       <th className="text-left p-4">Date</th>
                       <th className="text-left p-4">Total</th>
+                      <th className="text-left p-4">Customization</th>
                       <th className="text-left p-4">Status</th>
                       <th className="text-left p-4">Actions</th>
                     </tr>
@@ -389,8 +392,23 @@ export default function OrderManagement() {
                         <td className="p-4">
                           {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td className="p-4">
+                         <td className="p-4">
                           ₹{(Number(order.totalAmount) || 0).toFixed(2)}
+                        </td>
+                        <td className="p-4">
+                          {order.items?.some(item => item.customRequest || (item.customPhotos && item.customPhotos.length > 0)) ? (
+                            <div className="flex gap-2 text-amber-600">
+                              {order.items?.some(item => item.customRequest) && (
+                                <MessageSquare className="h-4 w-4" title="Has custom message" />
+                              )}
+                              {order.items?.some(item => item.customPhotos && item.customPhotos.length > 0) && (
+                                <ImageIcon className="h-4 w-4" title="Has custom photos" />
+                              )}
+                              <span className="text-xs font-medium">Yes</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">None</span>
+                          )}
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
